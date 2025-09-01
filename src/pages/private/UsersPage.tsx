@@ -52,6 +52,8 @@ export const UsersPage = () => {
         },
       });
       
+      console.log('Respuesta de GET /users:', response.data); 
+      
       if (response.data && response.data.data !== undefined) {
         setUsers(response.data.data);
         setTotal(response.data.total);
@@ -60,12 +62,12 @@ export const UsersPage = () => {
         setUsers(response.data);
         setTotal(response.data.length); 
       }
-      // Si la respuesta tiene otra estructura
       else {
         setUsers(response.data.users || response.data.items || []);
         setTotal(response.data.total || response.data.count || 0);
       }
     } catch (error) {
+      console.error('Error en listUsersApi:', error); 
       showAlert(error instanceof Error ? error.message : 'Error al cargar usuarios', 'error');
     } finally {
       setLoading(false);
@@ -102,16 +104,19 @@ export const UsersPage = () => {
     try {
       schemaUserCreate.parse(rawData);
       
-      await axios.post('/users', {
+      const response = await axios.post('/users', {
         username: rawData.username,
         password: rawData.password,
       });
+      
+      console.log('Respuesta de POST /users:', response.data); 
       
       showAlert('Usuario creado exitosamente', 'success');
       listUsersApi();
       handleCloseDialog();
       return;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error en handleCreate:', error.response?.data || error.message); 
       const err = hanleZodError<UserFormValues>(error, rawData);
       showAlert(err.message, 'error');
       return err;
@@ -129,17 +134,46 @@ export const UsersPage = () => {
     try {
       schemaUserUpdate.parse(rawData);
       
-      await axios.put(`/users/${user!.id}`, {
-        username: rawData.username,
-      });
-
+      console.log('Actualizando usuario ID:', user!.id); 
+      console.log('Datos a enviar:', rawData); 
+      
+      // Payload simple
+      const response = await axios.put(`/users/${user!.id}`, rawData);
+      
+      // Si el backend espera estructura diferente
+      // const response = await axios.put(`/users/${user!.id}`, {
+      //   user: rawData
+      // });
+      
+      // Con headers específicos
+      // const response = await axios.put(`/users/${user!.id}`, rawData, {
+      //   headers: {
+      //     'Content-Type': 'application/json'
+      //   }
+      // });
+      
+      console.log('Respuesta de PUT /users:', response.data); 
+      
       showAlert('Usuario actualizado exitosamente', 'success');
       listUsersApi();
       handleCloseDialog();
       return;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error completo en handleUpdate:', error);
+      console.error('Status:', error.response?.status);
+      console.error('Data:', error.response?.data);
+      console.error('Headers:', error.response?.headers);
+      
+      let errorMessage = 'Error al actualizar usuario';
+      
+      if (error.response?.data) {
+        errorMessage = error.response.data.message 
+          || error.response.data.error
+          || JSON.stringify(error.response.data);
+      }
+      
       const err = hanleZodError<UserUpdateFormValues>(error, rawData);
-      showAlert(err.message, 'error');
+      showAlert(errorMessage, 'error');
       return err;
     }
   };
@@ -151,13 +185,16 @@ export const UsersPage = () => {
       );
       if (!confirmed) return;
 
-      await axios.patch(`/users/${id}`, {
+      const response = await axios.patch(`/users/${id}`, {
         active: !active,
       });
       
+      console.log('Respuesta de PATCH /users:', response.data); 
+      
       showAlert(`Usuario ${active ? 'inactivado' : 'activado'} exitosamente`, 'success');
       listUsersApi();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error en handleToggleStatus:', error.response?.data || error.message); 
       showAlert(error instanceof Error ? error.message : 'Error al cambiar estado', 'error');
     }
   };
@@ -167,11 +204,14 @@ export const UsersPage = () => {
       const confirmed = window.confirm('¿Estás seguro de eliminar este usuario?');
       if (!confirmed) return;
 
-      await axios.delete(`/users/${id}`);
+      const response = await axios.delete(`/users/${id}`);
+      
+      console.log('Respuesta de DELETE /users:', response.data); 
       
       showAlert('Usuario eliminado exitosamente', 'success');
       listUsersApi();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error en handleDelete:', error.response?.data || error.message); 
       showAlert(error instanceof Error ? error.message : 'Error al eliminar usuario', 'error');
     }
   };
