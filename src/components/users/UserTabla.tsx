@@ -14,6 +14,7 @@ import {
   ToggleOff as InactiveIcon,
 } from '@mui/icons-material';
 
+// Componente de overlay de carga
 const CustomLoadingOverlay = () => <LinearProgress />;
 
 interface Props {
@@ -24,7 +25,7 @@ interface Props {
   sortModel: GridSortModel;
   setSortModel: (model: GridSortModel) => void;
   handleDelete: (id: number) => void;
-  handleToggleStatus: (user: UserType) => void;
+  handleToggleStatus: (user: UserType) => void;  
   handleOpenEditDialog: (user: UserType) => void;
   loading?: boolean;
 }
@@ -62,9 +63,11 @@ export const UserTabla = ({
       headerName: 'Fecha Creación',
       width: 180,
       valueFormatter: (params: GridRenderCellParams<any, any, any>) => {
-        if (!params.value) return 'N/A';
+        const value = params?.value;
+        if (!value) return 'N/A';
         try {
-          return new Date(params.value).toLocaleDateString();
+          const date = new Date(value);
+          return isNaN(date.getTime()) ? 'Fecha inválida' : date.toLocaleDateString();
         } catch {
           return 'Fecha inválida';
         }
@@ -79,8 +82,8 @@ export const UserTabla = ({
       renderCell: (params: GridRenderCellParams) => (
         <Stack direction={'row'} spacing={1}>
           <Tooltip title="Editar">
-            <IconButton
-              size="small"
+            <IconButton 
+              size="small" 
               onClick={() => handleOpenEditDialog(params.row)}
               disabled={loading}
             >
