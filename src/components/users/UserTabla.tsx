@@ -22,7 +22,7 @@ interface Props {
   sortModel: GridSortModel;
   setSortModel: (model: GridSortModel) => void;
   handleDelete: (id: number) => void;
-  handleToggleStatus: (id: number, active: boolean) => void;
+  handleToggleStatus: (user: UserType) => void;  
   handleOpenEditDialog: (user: UserType) => void;
   loading?: boolean;
 }
@@ -43,13 +43,13 @@ export const UserTabla = ({
     { field: 'id', headerName: 'ID', width: 90 },
     { field: 'username', headerName: 'Usuario', flex: 1 },
     {
-      field: 'active',
+      field: 'status',
       headerName: 'Estado',
       width: 150,
       renderCell: (params: GridRenderCellParams) => (
         <Chip
-          label={params.value === true ? 'Activo' : 'Inactivo'}
-          color={params.value === true ? 'success' : 'error'}
+          label={params.value === 'ACTIVE' ? 'Activo' : 'Inactivo'}
+          color={params.value === 'ACTIVE' ? 'success' : 'error'}
           size="small"
           variant="outlined"
         />
@@ -86,18 +86,14 @@ export const UserTabla = ({
             </IconButton>
           </Tooltip>
 
-          <Tooltip title={params.row.active ? 'Inactivar' : 'Activar'}>
+          <Tooltip title={params.row.status === 'ACTIVE' ? 'Inactivar' : 'Activar'}>
             <IconButton
               size="small"
-              color={params.row.active ? 'error' : 'success'}
-              onClick={() => handleToggleStatus(params.row.id, params.row.active)}
+              color={params.row.status === 'ACTIVE' ? 'error' : 'success'}
+              onClick={() => handleToggleStatus(params.row)}
               disabled={loading}
             >
-              {params.row.active ? (
-                <InactiveIcon fontSize="small" />
-              ) : (
-                <ActiveIcon fontSize="small" />
-              )}
+              {params.row.status === 'ACTIVE' ? <InactiveIcon fontSize="small" /> : <ActiveIcon fontSize="small" />}
             </IconButton>
           </Tooltip>
 

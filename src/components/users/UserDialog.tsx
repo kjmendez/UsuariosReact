@@ -78,37 +78,36 @@ export const UserDialog = ({
             helperText={state?.errors?.username}
             sx={{ mb: 2 }}
           />
-
+          <TextField
+            name="password"
+            margin="dense"
+            label="Contraseña"
+            fullWidth
+            required
+            type={showPassword ? 'text' : 'password'}
+            disabled={isPending}
+            defaultValue={state?.formData?.password || ''}
+            error={!!state?.errors?.password}
+            helperText={state?.errors?.password}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={handleClickShowPassword}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            sx={{ mb: 2 }}
+          />
+          {/*Solo mostrar confirmación cuando se está creando */}
           {isCreate && (
             <>
-              <TextField
-                name="password"
-                margin="dense"
-                label="Contraseña"
-                fullWidth
-                required
-                type={showPassword ? 'text' : 'password'}
-                disabled={isPending}
-                defaultValue={state?.formData?.password || ''}
-                error={!!state?.errors?.password}
-                helperText={state?.errors?.password}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={handleClickShowPassword}
-                        edge="end"
-                      >
-                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 2 }}
-              />
-
-              <TextField
+                <TextField
                 name="confirmPassword"
                 margin="dense"
                 label="Confirmar contraseña"

@@ -9,27 +9,28 @@ import {
 import { useEffect, useState } from 'react';
 import type { UserFilterStatusType, UserType } from '../../components/users/type';
 import type { GridPaginationModel, GridSortModel } from '@mui/x-data-grid';
-import { useAlert, useAxios } from '../../hooks';
+import { useAlert, useAxios, useAuth } from '../../hooks';
 import { hanleZodError } from '../../helpers';
 import { schemaUserCreate, schemaUserUpdate, type UserFormValues, type UserUpdateFormValues } from '../../models';
 
 export const UsersPage = () => {
   const { showAlert } = useAlert();
   const axios = useAxios();
+  const { token, logout } = useAuth(); // <--- Aquí llamamos useAuth correctamente
 
   const [filterStatus, setFilterStatus] = useState<UserFilterStatusType>('all');
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState<UserType[]>([]);
   const [total, setTotal] = useState(0);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
-    page: 0, 
+    page: 0,
     pageSize: 10,
   });
   const [sortModel, setSortModel] = useState<GridSortModel>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [user, setUser] = useState<UserType | null>(null);
   const [isCreate, setIsCreate] = useState(true);
-  const [loading, setLoading] = useState(false); 
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     listUsersApi();
@@ -40,34 +41,41 @@ export const UsersPage = () => {
     try {
       const orderBy = sortModel[0]?.field;
       const orderDir = sortModel[0]?.sort;
- 
+
       const response = await axios.get('/users', {
         params: {
-          page: paginationModel.page + 1, 
+          page: paginationModel.page + 1,
           limit: paginationModel.pageSize,
           orderBy,
           orderDir,
           search,
-          active: filterStatus === 'all' ? undefined : filterStatus === 'active',
+          status:
+            filterStatus === 'all'
+              ? undefined
+              : filterStatus === 'active'
+              ? 'active'
+              : 'inactive',
         },
       });
-      
-      console.log('Respuesta de GET /users:', response.data); 
-      
+
       if (response.data && response.data.data !== undefined) {
-        setUsers(response.data.data);
+        const mappedUsers = response.data.data.map((u: any) => ({
+          ...u,
+          status: u.status.toUpperCase(),
+        }));
+        setUsers(mappedUsers);
         setTotal(response.data.total);
-      } 
-      else if (Array.isArray(response.data)) {
-        setUsers(response.data);
-        setTotal(response.data.length); 
-      }
-      else {
-        setUsers(response.data.users || response.data.items || []);
+      } else if (Array.isArray(response.data)) {
+        setUsers(response.data.map((u: any) => ({ ...u, status: u.status.toUpperCase() })));
+        setTotal(response.data.length);
+      } else {
+        const items = response.data.users || response.data.items || [];
+        setUsers(items.map((u: any) => ({ ...u, status: u.status.toUpperCase() })));
         setTotal(response.data.total || response.data.count || 0);
       }
-    } catch (error) {
-      console.error('Error en listUsersApi:', error); 
+    } catch (error: any) {
+      console.error('Error en listUsersApi:', error);
+      if (error.response?.status === 401) logout();
       showAlert(error instanceof Error ? error.message : 'Error al cargar usuarios', 'error');
     } finally {
       setLoading(false);
@@ -91,10 +99,7 @@ export const UsersPage = () => {
     setIsCreate(false);
   };
 
-  const handleCreate = async (
-    _: UserActionState | undefined,
-    formdata: FormData
-  ) => {
+  const handleCreate = async (_: UserActionState | undefined, formdata: FormData) => {
     const rawData = {
       username: formdata.get('username') as string,
       password: formdata.get('password') as string,
@@ -103,116 +108,78 @@ export const UsersPage = () => {
 
     try {
       schemaUserCreate.parse(rawData);
-      
-      const response = await axios.post('/users', {
-        username: rawData.username,
-        password: rawData.password,
-      });
-      
-      console.log('Respuesta de POST /users:', response.data); 
-      
+      await axios.post('/users', { username: rawData.username, password: rawData.password });
       showAlert('Usuario creado exitosamente', 'success');
       listUsersApi();
       handleCloseDialog();
-      return;
     } catch (error: any) {
-      console.error('Error en handleCreate:', error.response?.data || error.message); 
       const err = hanleZodError<UserFormValues>(error, rawData);
       showAlert(err.message, 'error');
-      return err;
     }
   };
 
-  const handleUpdate = async (
-    _: UserActionState | undefined,
-    formdata: FormData
-  ) => {
-    const rawData = {
-      username: formdata.get('username') as string,
-    };
+  const handleUpdate = async (_: UserActionState | undefined, formdata: FormData) => {
+  const username = formdata.get('username') as string;
+  const password = formdata.get('password') as string;
 
-    try {
-      schemaUserUpdate.parse(rawData);
-      
-      console.log('Actualizando usuario ID:', user!.id); 
-      console.log('Datos a enviar:', rawData); 
-      
-      // Payload simple
-      const response = await axios.put(`/users/${user!.id}`, rawData);
-      
-      // Si el backend espera estructura diferente
-      // const response = await axios.put(`/users/${user!.id}`, {
-      //   user: rawData
-      // });
-      
-      // Con headers específicos
-      // const response = await axios.put(`/users/${user!.id}`, rawData, {
-      //   headers: {
-      //     'Content-Type': 'application/json'
-      //   }
-      // });
-      
-      console.log('Respuesta de PUT /users:', response.data); 
-      
-      showAlert('Usuario actualizado exitosamente', 'success');
-      listUsersApi();
-      handleCloseDialog();
-      return;
-    } catch (error: any) {
-      console.error('Error completo en handleUpdate:', error);
-      console.error('Status:', error.response?.status);
-      console.error('Data:', error.response?.data);
-      console.error('Headers:', error.response?.headers);
-      
-      let errorMessage = 'Error al actualizar usuario';
-      
-      if (error.response?.data) {
-        errorMessage = error.response.data.message 
-          || error.response.data.error
-          || JSON.stringify(error.response.data);
-      }
-      
-      const err = hanleZodError<UserUpdateFormValues>(error, rawData);
-      showAlert(errorMessage, 'error');
-      return err;
+  const rawData: any = { username };
+  if (password) rawData.password = password; // solo si hay password
+
+  try {
+    schemaUserUpdate.parse(rawData);
+    await axios.put(`/users/${user!.id}`, rawData);
+    showAlert('Usuario actualizado exitosamente', 'success');
+    listUsersApi();
+    handleCloseDialog();
+  } catch (error: any) {
+    let errorMessage = 'Error al actualizar usuario';
+    if (error.response?.data) {
+      errorMessage = error.response.data.message || error.response.data.error || JSON.stringify(error.response.data);
     }
-  };
+    showAlert(errorMessage, 'error');
+  }
+};
 
-  const handleToggleStatus = async (id: number, active: boolean) => {
+
+  const handleToggleStatus = async (user: UserType) => {
     try {
-      const confirmed = window.confirm(
-        `¿Estás seguro de que quieres ${active ? 'inactivar' : 'activar'} este usuario?`
+      const newStatus = user.status.toLowerCase() === 'active' ? 'inactive' : 'active';
+
+      await axios.patch(`/users/${user.id}`, { status: newStatus });
+
+      showAlert(
+        `Usuario ${newStatus === 'active' ? 'activado' : 'inactivado'} correctamente`,
+        'success'
       );
-      if (!confirmed) return;
 
-      const response = await axios.patch(`/users/${id}`, {
-        active: !active,
-      });
-      
-      console.log('Respuesta de PATCH /users:', response.data); 
-      
-      showAlert(`Usuario ${active ? 'inactivado' : 'activado'} exitosamente`, 'success');
       listUsersApi();
     } catch (error: any) {
-      console.error('Error en handleToggleStatus:', error.response?.data || error.message); 
-      showAlert(error instanceof Error ? error.message : 'Error al cambiar estado', 'error');
+      console.error('Error en handleToggleStatus:', error.response?.data || error);
+      if (error.response?.status === 401) logout();
+      showAlert(error.response?.data?.message || 'Error al cambiar estado del usuario', 'error');
     }
   };
 
   const handleDelete = async (id: number) => {
-    try {
-      const confirmed = window.confirm('¿Estás seguro de eliminar este usuario?');
-      if (!confirmed) return;
+    if (!token) {
+      showAlert('No autorizado. Debes iniciar sesión', 'error');
+      return;
+    }
 
-      const response = await axios.delete(`/users/${id}`);
-      
-      console.log('Respuesta de DELETE /users:', response.data); 
-      
+    const confirmed = window.confirm('¿Estás seguro de eliminar este usuario?');
+    if (!confirmed) return;
+
+    try {
+      await axios.delete(`/users/${id}`);
       showAlert('Usuario eliminado exitosamente', 'success');
       listUsersApi();
     } catch (error: any) {
-      console.error('Error en handleDelete:', error.response?.data || error.message); 
-      showAlert(error instanceof Error ? error.message : 'Error al eliminar usuario', 'error');
+      console.error('Error en handleDelete:', error.response?.data || error);
+      if (error.response?.status === 401) logout();
+      showAlert(
+        error.response?.data?.message || 'Error al eliminar usuario',
+        'error'
+      );
     }
   };
 
@@ -234,7 +201,7 @@ export const UsersPage = () => {
         handleDelete={handleDelete}
         handleToggleStatus={handleToggleStatus}
         handleOpenEditDialog={handleOpenEditDialog}
-        loading={loading} 
+        loading={loading}
       />
       <UserDialog
         open={openDialog}
