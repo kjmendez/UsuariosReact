@@ -11,7 +11,7 @@ import {
   IconButton,
 } from '@mui/material';
 import type { UserType } from './type';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { UserFormValues } from '../../models';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 
@@ -33,7 +33,7 @@ export const UserDialog = ({
   handleUpdate,
 }: Props) => {
   const [formData, setFormData] = useState<UserFormValues>({
-    username: user?.username || '',
+    username: '',
     password: '',
     confirmPassword: '',
   });
@@ -42,6 +42,15 @@ export const UserDialog = ({
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Actualiza formData cuando cambia el usuario
+  useEffect(() => {
+    setFormData({
+      username: user?.username || '',
+      password: '',
+      confirmPassword: '',
+    });
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
