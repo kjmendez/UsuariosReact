@@ -1,8 +1,10 @@
 {
+  
   "name": "diplomado-react",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://kjmendez.github.io/UsuariosReact",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

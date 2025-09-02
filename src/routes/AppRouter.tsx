@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, HashRouter  } from 'react-router-dom';
+import { Navigate, Route, Routes, HashRouter  } from 'react-router-dom';
 import { LoginPage, NotFoundPage, UserPage } from '../pages/public';
 import { PublicRoute } from './PublicRouter';
 import { PrivateLayout } from '../layouts/PrivateLayout';

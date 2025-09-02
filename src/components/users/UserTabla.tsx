@@ -3,6 +3,7 @@ import {
   type GridColDef,
   type GridPaginationModel,
   type GridRenderCellParams,
+  type GridSortModel,
 } from '@mui/x-data-grid';
 import type { UserType } from './type';
 import { Box, Chip, IconButton, Stack, Tooltip, LinearProgress } from '@mui/material';
@@ -12,7 +13,8 @@ import {
   ToggleOn as ActiveIcon,
   ToggleOff as InactiveIcon,
 } from '@mui/icons-material';
-import type { GridSortModel } from '@mui/x-data-grid';
+
+const CustomLoadingOverlay = () => <LinearProgress />;
 
 interface Props {
   users: UserType[];
@@ -22,7 +24,7 @@ interface Props {
   sortModel: GridSortModel;
   setSortModel: (model: GridSortModel) => void;
   handleDelete: (id: number) => void;
-  handleToggleStatus: (user: UserType) => void;  
+  handleToggleStatus: (user: UserType) => void;
   handleOpenEditDialog: (user: UserType) => void;
   loading?: boolean;
 }
@@ -59,11 +61,11 @@ export const UserTabla = ({
       field: 'createdAt',
       headerName: 'Fecha Creación',
       width: 180,
-      valueFormatter: (params) => {
-        if (!params?.value) return 'N/A';
+      valueFormatter: (params: GridRenderCellParams<any, any, any>) => {
+        if (!params.value) return 'N/A';
         try {
           return new Date(params.value).toLocaleDateString();
-        } catch (error) {
+        } catch {
           return 'Fecha inválida';
         }
       },
@@ -77,8 +79,8 @@ export const UserTabla = ({
       renderCell: (params: GridRenderCellParams) => (
         <Stack direction={'row'} spacing={1}>
           <Tooltip title="Editar">
-            <IconButton 
-              size="small" 
+            <IconButton
+              size="small"
               onClick={() => handleOpenEditDialog(params.row)}
               disabled={loading}
             >
@@ -128,7 +130,7 @@ export const UserTabla = ({
         disableColumnFilter
         loading={loading}
         slots={{
-          loadingOverlay: LinearProgress,
+          loadingOverlay: CustomLoadingOverlay,
         }}
       />
     </Box>

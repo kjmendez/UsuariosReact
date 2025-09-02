@@ -11,58 +11,62 @@ import {
   IconButton,
 } from '@mui/material';
 import type { UserType } from './type';
-import { useActionState, useState } from 'react';
-import type { ActionState } from '../../interfaces';
-import type { UserFormValues, UserUpdateFormValues } from '../../models';
-import { createInitialState } from '../../helpers';
+import { useState } from 'react';
+import type { UserFormValues } from '../../models';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
-
-export type UserActionState = ActionState<UserFormValues | UserUpdateFormValues>;
 
 interface Props {
   open: boolean;
   user?: UserType | null;
   isCreate: boolean;
   onClose: () => void;
-  handleCreate: (
-    _: UserActionState | undefined,
-    formData: FormData
-  ) => Promise<UserActionState | undefined>;
-  handleUpdate: (
-    _: UserActionState | undefined,
-    formData: FormData
-  ) => Promise<UserActionState | undefined>;
+  handleCreate: (formData: FormData) => Promise<void>;
+  handleUpdate: (formData: FormData) => Promise<void>;
 }
 
-export const UserDialog = ({ 
-  onClose, 
-  open, 
-  user, 
-  isCreate, 
-  handleCreate, 
-  handleUpdate 
+export const UserDialog = ({
+  onClose,
+  open,
+  user,
+  isCreate,
+  handleCreate,
+  handleUpdate,
 }: Props) => {
-  const initialState = createInitialState<UserFormValues | UserUpdateFormValues>();
+  const [formData, setFormData] = useState<UserFormValues>({
+    username: user?.username || '',
+    password: '',
+    confirmPassword: '',
+  });
+
+  const [errors, setErrors] = useState<Partial<UserFormValues>>({});
+  const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [state, submitAction, isPending] = useActionState(
-    isCreate ? handleCreate : handleUpdate,
-    initialState
-  );
-
-  const handleClickShowPassword = () => {
-    setShowPassword(!showPassword);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleClickShowConfirmPassword = () => {
-    setShowConfirmPassword(!showConfirmPassword);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsPending(true);
+    setErrors({});
+    const data = new FormData(e.currentTarget);
+    try {
+      if (isCreate) await handleCreate(data);
+      else await handleUpdate(data);
+      setFormData({ username: '', password: '', confirmPassword: '' });
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth={'sm'} fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{user ? 'Editar usuario' : 'Nuevo usuario'}</DialogTitle>
-      <Box key={user?.id ?? 'new'} component={'form'} action={submitAction}>
+      <Box key={user?.id ?? 'new'} component="form" onSubmit={handleSubmit}>
         <DialogContent>
           <TextField
             name="username"
@@ -73,9 +77,10 @@ export const UserDialog = ({
             required
             variant="outlined"
             disabled={isPending}
-            defaultValue={state?.formData?.username || user?.username || ''}
-            error={!!state?.errors?.username}
-            helperText={state?.errors?.username}
+            value={formData.username}
+            onChange={handleChange}
+            error={!!errors.username}
+            helperText={errors.username}
             sx={{ mb: 2 }}
           />
           <TextField
@@ -83,18 +88,19 @@ export const UserDialog = ({
             margin="dense"
             label="Contraseña"
             fullWidth
-            required
+            required={isCreate}
             type={showPassword ? 'text' : 'password'}
             disabled={isPending}
-            defaultValue={state?.formData?.password || ''}
-            error={!!state?.errors?.password}
-            helperText={state?.errors?.password}
+            value={formData.password}
+            onChange={handleChange}
+            error={!!errors.password}
+            helperText={errors.password}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
                     aria-label="toggle password visibility"
-                    onClick={handleClickShowPassword}
+                    onClick={() => setShowPassword((prev) => !prev)}
                     edge="end"
                   >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
@@ -104,35 +110,33 @@ export const UserDialog = ({
             }}
             sx={{ mb: 2 }}
           />
-          {/*Solo mostrar confirmación cuando se está creando */}
           {isCreate && (
-            <>
-                <TextField
-                name="confirmPassword"
-                margin="dense"
-                label="Confirmar contraseña"
-                fullWidth
-                required
-                type={showConfirmPassword ? 'text' : 'password'}
-                disabled={isPending}
-                defaultValue={state?.formData?.confirmPassword || ''}
-                error={!!state?.errors?.confirmPassword}
-                helperText={state?.errors?.confirmPassword}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        aria-label="toggle password visibility"
-                        onClick={handleClickShowConfirmPassword}
-                        edge="end"
-                      >
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </>
+            <TextField
+              name="confirmPassword"
+              margin="dense"
+              label="Confirmar contraseña"
+              fullWidth
+              required
+              type={showConfirmPassword ? 'text' : 'password'}
+              disabled={isPending}
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              error={!!errors.confirmPassword}
+              helperText={errors.confirmPassword}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle confirm password visibility"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      edge="end"
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
           )}
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
